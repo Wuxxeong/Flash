@@ -20,9 +20,10 @@ public class OrderController {
     @PostMapping("/purchase")
     public ResponseEntity<OrderResponse> purchaseItem(
         @RequestParam Long itemId, 
-        @RequestParam Long userId
+        @RequestParam Long userId,
+        @RequestParam(defaultValue = "1") Integer quantity
     ) {
-        Order order = orderService.createOrder(userId, itemId);  // user -> userId로 변경
+        Order order = orderService.createOrder(userId, itemId, quantity);
         return ResponseEntity.ok(OrderResponse.from(order));
     }
     
