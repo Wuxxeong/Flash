@@ -28,7 +28,7 @@ public class OrderServiceImpl implements OrderService {
     
     @Override
     @Transactional
-    public Order createOrder(Long userId, Long itemId) {
+    public Order createOrder(Long userId, Long itemId, Integer quantity) {
         // 사용자 조회
         User user = userRepository.findById(userId)
             .orElseThrow(UserException.UserNotFoundException::new);
@@ -38,22 +38,21 @@ public class OrderServiceImpl implements OrderService {
             .orElseThrow(ItemException.ItemNotFoundException::new);
             
         // 재고 확인
-        if (item.getStock() <= 0) {
+        if (item.getStock() < quantity) {
             throw new ItemException.OutOfStockException();
         }
 
-        
         // 주문 생성
         Order order = Order.builder()
             .user(user)
             .item(item)
-            .quantity(1)
+            .quantity(quantity)
             .build();
             
         order = orderRepository.save(order);
         
         // 재고 차감
-        item.decreaseStock(1);
+        item.decreaseStock(quantity);
         itemRepository.save(item);
         
         return order;

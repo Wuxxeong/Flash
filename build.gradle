@@ -8,7 +8,8 @@ group = 'com.flash'
 version = '0.0.1-SNAPSHOT'
 
 java {
-	sourceCompatibility = '17'
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
 }
 
 configurations {
@@ -40,4 +41,13 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	jvmArgs += [
+		'-XX:+EnableDynamicAgentLoading',
+		'-Djdk.instrument.traceUsage=false'
+	]
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+	options.compilerArgs += ['-parameters']
 }
