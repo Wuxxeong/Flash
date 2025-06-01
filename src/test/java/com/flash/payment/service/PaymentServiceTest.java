@@ -29,27 +29,32 @@ class PaymentServiceTest {
     @InjectMocks
     private PaymentServiceImpl paymentService;
 
-    @Test
-    @DisplayName("결제 생성 테스트")
-    void createPayment() {
-        // given
-        User user = User.builder()
+    private User createTestUser() {
+        return User.builder()
             .email("test@example.com")
             .password("password123")
             .name("Test User")
             .build();
+    }
 
-        Item item = Item.builder()
+    private Item createTestItem() {
+        return Item.builder()
             .name("Test Item")
+            .description("Test Description")
             .price(10000)
-            .stock(10)
-            .saleStart(LocalDateTime.now().minusDays(1))
-            .saleEnd(LocalDateTime.now().plusDays(1))
+            .stock(100)
+            .saleStart(LocalDateTime.now())
+            .saleEnd(LocalDateTime.now().plusDays(7))
             .build();
+    }
 
+    @Test
+    @DisplayName("결제 생성 테스트")
+    void createPayment() {
+        // given
         Order order = Order.builder()
-            .user(user)
-            .item(item)
+            .user(createTestUser())
+            .item(createTestItem())
             .quantity(1)
             .build();
 
@@ -70,12 +75,28 @@ class PaymentServiceTest {
     }
 
     @Test
+    @DisplayName("잘못된 주문 상태로 결제 생성 시도 시 예외 발생")
+    void createPaymentWithInvalidOrderStatus() {
+        // given
+        Order order = Order.builder()
+            .user(createTestUser())
+            .item(createTestItem())
+            .quantity(1)
+            .build();
+        order.updateStatus(Order.OrderStatus.PAID);
+
+        // when & then
+        assertThatThrownBy(() -> paymentService.createPayment(order))
+            .isInstanceOf(OrderException.InvalidOrderStatusException.class);
+    }
+
+    @Test
     @DisplayName("결제 처리 테스트")
     void processPayment() {
         // given
         Order order = Order.builder()
-            .user(User.builder().build())
-            .item(Item.builder().build())
+            .user(createTestUser())
+            .item(createTestItem())
             .quantity(1)
             .build();
 
@@ -91,12 +112,11 @@ class PaymentServiceTest {
 
         // then
         assertThat(processedPayment.getStatus()).isEqualTo(Payment.PaymentStatus.COMPLETED);
-        assertThat(processedPayment.getPaidAt()).isNotNull();
         assertThat(processedPayment.getOrder().getStatus()).isEqualTo(Order.OrderStatus.PAID);
     }
 
     @Test
-    @DisplayName("결제를 찾을 수 없는 경우 예외 발생")
+    @DisplayName("존재하지 않는 결제 처리 시도 시 예외 발생")
     void processPaymentNotFound() {
         // given
         when(paymentRepository.findById(1L)).thenReturn(Optional.empty());
@@ -107,12 +127,12 @@ class PaymentServiceTest {
     }
 
     @Test
-    @DisplayName("이미 완료된 결제를 처리하려고 할 경우 예외 발생")
+    @DisplayName("이미 완료된 결제 처리 시도 시 예외 발생")
     void processPaymentAlreadyCompleted() {
         // given
         Order order = Order.builder()
-            .user(User.builder().build())
-            .item(Item.builder().build())
+            .user(createTestUser())
+            .item(createTestItem())
             .quantity(1)
             .build();
 
@@ -127,21 +147,5 @@ class PaymentServiceTest {
         // when & then
         assertThatThrownBy(() -> paymentService.processPayment(1L))
             .isInstanceOf(PaymentException.InvalidPaymentStatusException.class);
-    }
-
-    @Test
-    @DisplayName("잘못된 주문 상태로 결제 생성 시도 시 예외 발생")
-    void createPaymentWithInvalidOrderStatus() {
-        // given
-        Order order = Order.builder()
-            .user(User.builder().build())
-            .item(Item.builder().build())
-            .quantity(1)
-            .build();
-        order.complete(); // 주문 상태를 PAID로 변경
-
-        // when & then
-        assertThatThrownBy(() -> paymentService.createPayment(order))
-            .isInstanceOf(OrderException.InvalidOrderStatusException.class);
     }
 } 

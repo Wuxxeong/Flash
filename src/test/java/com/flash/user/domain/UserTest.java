@@ -8,6 +8,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class UserTest {
 
+    private User createTestUser() {
+        return User.builder()
+            .email("test@example.com")
+            .password("password123")
+            .name("Test User")
+            .build();
+    }
+
     @Test
     @DisplayName("사용자 생성 테스트")
     void createUser() {
@@ -85,11 +93,7 @@ class UserTest {
     @DisplayName("사용자 생성 시 생성 시간이 설정됨")
     void userHasCreationTime() {
         // given
-        User user = User.builder()
-            .email("test@example.com")
-            .password("password123")
-            .name("Test User")
-            .build();
+        User user = createTestUser();
 
         // then
         assertThat(user.getCreatedAt()).isNotNull();

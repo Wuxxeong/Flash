@@ -1,7 +1,7 @@
 package com.flash.order.domain;
 
-import com.flash.item.domain.Item;
 import com.flash.user.domain.User;
+import com.flash.item.domain.Item;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
@@ -10,36 +10,44 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class OrderTest {
 
-    @Test
-    @DisplayName("주문 생성 테스트")
-    void createOrder() {
-        // given
-        User user = User.builder()
+    private User createTestUser() {
+        return User.builder()
             .email("test@example.com")
             .password("password123")
             .name("Test User")
             .build();
+    }
 
-        Item item = Item.builder()
+    private Item createTestItem() {
+        return Item.builder()
             .name("Test Item")
             .description("Test Description")
             .price(10000)
-            .stock(10)
-            .saleStart(LocalDateTime.now().minusDays(1))
-            .saleEnd(LocalDateTime.now().plusDays(1))
+            .stock(100)
+            .saleStart(LocalDateTime.now())
+            .saleEnd(LocalDateTime.now().plusDays(7))
             .build();
+    }
+
+    @Test
+    @DisplayName("주문 생성 테스트")
+    void createOrder() {
+        // given
+        User user = createTestUser();
+        Item item = createTestItem();
+        int quantity = 2;
 
         // when
         Order order = Order.builder()
             .user(user)
             .item(item)
-            .quantity(2)
+            .quantity(quantity)
             .build();
 
         // then
         assertThat(order.getUser()).isEqualTo(user);
         assertThat(order.getItem()).isEqualTo(item);
-        assertThat(order.getQuantity()).isEqualTo(2);
+        assertThat(order.getQuantity()).isEqualTo(quantity);
         assertThat(order.getStatus()).isEqualTo(Order.OrderStatus.PENDING);
         assertThat(order.getCreatedAt()).isNotNull();
     }
@@ -49,8 +57,8 @@ class OrderTest {
     void updateOrderStatus() {
         // given
         Order order = Order.builder()
-            .user(User.builder().build())
-            .item(Item.builder().build())
+            .user(createTestUser())
+            .item(createTestItem())
             .quantity(1)
             .build();
 
@@ -65,25 +73,19 @@ class OrderTest {
     @DisplayName("주문 총 금액 계산 테스트")
     void calculateTotalAmount() {
         // given
-        Item item = Item.builder()
-            .name("Test Item")
-            .price(10000)
-            .stock(10)
-            .saleStart(LocalDateTime.now().minusDays(1))
-            .saleEnd(LocalDateTime.now().plusDays(1))
-            .build();
-
+        Item item = createTestItem();
+        int quantity = 2;
         Order order = Order.builder()
-            .user(User.builder().build())
+            .user(createTestUser())
             .item(item)
-            .quantity(3)
+            .quantity(quantity)
             .build();
 
         // when
         int totalAmount = order.getTotalAmount();
 
         // then
-        assertThat(totalAmount).isEqualTo(30000); // 10000 * 3
+        assertThat(totalAmount).isEqualTo(item.getPrice() * quantity);
     }
 
     @Test
@@ -91,8 +93,8 @@ class OrderTest {
     void completeOrder() {
         // given
         Order order = Order.builder()
-            .user(User.builder().build())
-            .item(Item.builder().build())
+            .user(createTestUser())
+            .item(createTestItem())
             .quantity(1)
             .build();
 
@@ -108,8 +110,8 @@ class OrderTest {
     void defaultOrderStatusIsPending() {
         // given
         Order order = Order.builder()
-            .user(User.builder().build())
-            .item(Item.builder().build())
+            .user(createTestUser())
+            .item(createTestItem())
             .quantity(1)
             .build();
 
@@ -122,8 +124,8 @@ class OrderTest {
     void orderHasCreationTime() {
         // given
         Order order = Order.builder()
-            .user(User.builder().build())
-            .item(Item.builder().build())
+            .user(createTestUser())
+            .item(createTestItem())
             .quantity(1)
             .build();
 
