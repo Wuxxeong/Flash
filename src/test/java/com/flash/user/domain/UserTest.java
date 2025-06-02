@@ -137,4 +137,43 @@ class UserTest {
             .build())
             .isInstanceOf(ValidationException.EmptyNameException.class);
     }
+
+    @Test
+    @DisplayName("이메일이 공백 문자열인 경우 예외 발생")
+    void blankEmail() {
+        String password = "password123";
+        String name = "Test User";
+        assertThatThrownBy(() -> User.builder()
+            .email("   ")
+            .password(password)
+            .name(name)
+            .build())
+            .isInstanceOf(ValidationException.InvalidEmailException.class);
+    }
+
+    @Test
+    @DisplayName("비밀번호가 공백 문자열인 경우 예외 발생")
+    void blankPassword() {
+        String email = "test@example.com";
+        String name = "Test User";
+        assertThatThrownBy(() -> User.builder()
+            .email(email)
+            .password("   ")
+            .name(name)
+            .build())
+            .isInstanceOf(ValidationException.InvalidPasswordException.class);
+    }
+
+    @Test
+    @DisplayName("이름이 공백 문자열인 경우 예외 발생")
+    void blankName() {
+        String email = "test@example.com";
+        String password = "password123";
+        assertThatThrownBy(() -> User.builder()
+            .email(email)
+            .password(password)
+            .name("   ")
+            .build())
+            .isInstanceOf(ValidationException.EmptyNameException.class);
+    }
 } 

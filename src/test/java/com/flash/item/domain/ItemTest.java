@@ -118,4 +118,76 @@ class ItemTest {
         // then
         assertThat(isOnSale).isFalse();
     }
+
+    @Test
+    @DisplayName("판매 시작 전 상품 확인 테스트")
+    void isNotOnSaleBeforeStart() {
+        LocalDateTime now = LocalDateTime.now();
+        Item item = Item.builder()
+            .name("테스트 상품")
+            .description("테스트 설명")
+            .price(10000)
+            .stock(10)
+            .saleStart(now.plusMinutes(1))
+            .saleEnd(now.plusDays(1))
+            .build();
+
+        boolean isOnSale = item.isOnSale();
+
+        assertThat(isOnSale).isFalse();
+    }
+
+    @Test
+    @DisplayName("판매 시작 시각과 같은 경우 True 테스트")
+    void isOnSaleAtStart() {
+        LocalDateTime now = LocalDateTime.now();
+        Item item = Item.builder()
+            .name("테스트 상품")
+            .description("테스트 설명")
+            .price(10000)
+            .stock(10)
+            .saleStart(now)
+            .saleEnd(now.plusDays(1))
+            .build();
+
+        boolean isOnSale = item.isOnSale();
+
+        assertThat(isOnSale).isTrue();
+    }
+
+    @Test
+    @DisplayName("판매 종료 시각과 같은 경우 False 테스트")
+    void isNotOnSaleAtEnd() {
+        LocalDateTime now = LocalDateTime.now();
+        Item item = Item.builder()
+            .name("테스트 상품")
+            .description("테스트 설명")
+            .price(10000)
+            .stock(10)
+            .saleStart(now.minusDays(1))
+            .saleEnd(now)
+            .build();
+
+        boolean isOnSale = item.isOnSale();
+
+        assertThat(isOnSale).isFalse();
+    }
+
+    @Test
+    @DisplayName("판매 시작 시각과 종료 시각이 같은 경우 False 테스트")
+    void isNotOnSaleWhenStartEqualsEnd() {
+        LocalDateTime now = LocalDateTime.now();
+        Item item = Item.builder()
+            .name("테스트 상품")
+            .description("테스트 설명")
+            .price(10000)
+            .stock(10)
+            .saleStart(now)
+            .saleEnd(now)
+            .build();
+
+        boolean isOnSale = item.isOnSale();
+
+        assertThat(isOnSale).isFalse();
+    }
 } 

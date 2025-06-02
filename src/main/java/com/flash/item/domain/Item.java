@@ -59,6 +59,6 @@ public class Item {
     
     public boolean isOnSale() {
         LocalDateTime now = LocalDateTime.now();
-        return now.isAfter(saleStart) && now.isBefore(saleEnd);
+        return (now.isEqual(saleStart) || now.isAfter(saleStart)) && now.isBefore(saleEnd);
     }
 } 
