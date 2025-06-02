@@ -20,4 +20,7 @@ public class PaymentException {
             super("결제 처리에 실패했습니다.", "PAYMENT_PROCESS_FAILED");
         }
     }
+
+    public PaymentException() {
+    }
 } 

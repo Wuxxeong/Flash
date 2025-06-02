@@ -20,4 +20,7 @@ public class ItemException {
             super("상품 재고가 부족합니다.", "OUT_OF_STOCK");
         }
     }
+
+    public ItemException() {
+    }
 } 

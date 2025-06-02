@@ -98,4 +98,43 @@ class UserTest {
         // then
         assertThat(user.getCreatedAt()).isNotNull();
     }
+
+    @Test
+    @DisplayName("이메일이 null인 경우 예외 발생")
+    void nullEmail() {
+        String password = "password123";
+        String name = "Test User";
+        assertThatThrownBy(() -> User.builder()
+            .email(null)
+            .password(password)
+            .name(name)
+            .build())
+            .isInstanceOf(ValidationException.InvalidEmailException.class);
+    }
+
+    @Test
+    @DisplayName("비밀번호가 null인 경우 예외 발생")
+    void nullPassword() {
+        String email = "test@example.com";
+        String name = "Test User";
+        assertThatThrownBy(() -> User.builder()
+            .email(email)
+            .password(null)
+            .name(name)
+            .build())
+            .isInstanceOf(ValidationException.InvalidPasswordException.class);
+    }
+
+    @Test
+    @DisplayName("이름이 null인 경우 예외 발생")
+    void nullName() {
+        String email = "test@example.com";
+        String password = "password123";
+        assertThatThrownBy(() -> User.builder()
+            .email(email)
+            .password(password)
+            .name(null)
+            .build())
+            .isInstanceOf(ValidationException.EmptyNameException.class);
+    }
 } 

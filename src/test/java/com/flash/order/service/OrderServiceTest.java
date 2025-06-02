@@ -1,12 +1,14 @@
 package com.flash.order.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.flash.item.domain.Item;
+import com.flash.item.exception.ItemException;
 import com.flash.item.repository.ItemRepository;
 import com.flash.item.service.ItemService;
 import com.flash.order.domain.Order;
@@ -84,6 +86,38 @@ class OrderServiceTest {
         assertThat(createdOrder.getItem()).isEqualTo(item);
         assertThat(createdOrder.getQuantity()).isEqualTo(2);
         verify(orderRepository, times(1)).save(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("사용자 주문 조회시 재고가 부족한 경우 예외 발생 테스트")
+    void createOrder_no_stock(){
+        // given
+        User user = User.builder()
+            .email("test@example.com")
+            .password("password123")
+            .name("Test User")
+            .build();
+
+        Item item = Item.builder()
+            .name("Test Item")
+            .description("Test Description")
+            .price(10000)
+            .stock(10)
+            .saleStart(LocalDateTime.now().minusDays(1))
+            .saleEnd(LocalDateTime.now().plusDays(1))
+            .build();
+
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(itemRepository.findById(1L)).thenReturn(Optional.of(item));
+        // when
+        Integer quantity = 11; // 주문 수량이 재고보다 많음
+
+        // when & then
+        assertThatThrownBy(() -> orderService.createOrder(1L, 1L, quantity))
+            .isInstanceOf(ItemException.OutOfStockException.class);
+
+        // then
     }
 
     @Test

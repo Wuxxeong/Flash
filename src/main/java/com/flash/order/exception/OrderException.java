@@ -20,4 +20,7 @@ public class OrderException {
             super("잘못된 주문 상태입니다.", "INVALID_ORDER_STATUS");
         }
     }
+
+    public OrderException() {
+    }
 } 
