@@ -223,7 +223,7 @@ class ItemTest {
                 try {
                     // context switching 유도
                     Thread.sleep((long) (Math.random() * 10));
-                    item.decreaseStock(decreasePerThread);
+                    item.decreaseStockV2(decreasePerThread);
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     failCount.incrementAndGet();
@@ -272,8 +272,8 @@ class ItemTest {
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 try {
-//                    Thread.sleep((long) (Math.random() * 10));
-                    item.decreaseStock(1);
+                    Thread.sleep((long) (Math.random() * 10));
+                    item.decreaseStockV2(1);
                 } catch (Exception ignored) {
                 } finally {
                     latch.countDown();
