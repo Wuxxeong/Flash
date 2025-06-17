@@ -7,6 +7,8 @@ import java.util.List;
 
 public interface OrderService {
     Order createOrder(Long userId, Long itemId, Integer quantity);
+    Order createOrderV2(Long userId, Long itemId, Integer quantity);
+    Order createOrderV3(Long userId, Long itemId, Integer quantity);
     List<OrderResponse> getOrdersByUserId(Long userId);
     Order getOrder(Long orderId);
 } 

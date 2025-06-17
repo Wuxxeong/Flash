@@ -59,6 +59,60 @@ public class OrderServiceImpl implements OrderService {
     }
     
     @Override
+    @Transactional
+    public Order createOrderV2(Long userId, Long itemId, Integer quantity) {
+        // 사용자 조회
+        User user = userRepository.findById(userId)
+            .orElseThrow(UserException.UserNotFoundException::new);
+            
+        // 상품 조회
+        Item item = itemRepository.findById(itemId)
+            .orElseThrow(ItemException.ItemNotFoundException::new);
+            
+        // 주문 생성
+        Order order = Order.builder()
+            .user(user)
+            .item(item)
+            .quantity(quantity)
+            .build();
+            
+        order = orderRepository.save(order);
+        
+        // AtomicInteger를 사용한 재고 차감
+        item.decreaseStockV2(quantity);
+        itemRepository.save(item);
+        
+        return order;
+    }
+    
+    @Override
+    @Transactional
+    public Order createOrderV3(Long userId, Long itemId, Integer quantity) {
+        // 사용자 조회
+        User user = userRepository.findById(userId)
+            .orElseThrow(UserException.UserNotFoundException::new);
+            
+        // Pessimistic Lock을 사용하여 상품 조회
+        Item item = itemRepository.findByIdWithPessimisticLock(itemId)
+            .orElseThrow(ItemException.ItemNotFoundException::new);
+            
+        // 주문 생성
+        Order order = Order.builder()
+            .user(user)
+            .item(item)
+            .quantity(quantity)
+            .build();
+            
+        order = orderRepository.save(order);
+        
+        // 재고 차감
+        item.decreaseStockV3(quantity);
+        itemRepository.save(item);
+        
+        return order;
+    }
+    
+    @Override
     @Transactional(readOnly = true)
     public List<OrderResponse> getOrdersByUserId(Long userId) {
         List<Order> orders = orderRepository.findByUserId(userId);
