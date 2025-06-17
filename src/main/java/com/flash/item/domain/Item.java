@@ -92,6 +92,12 @@ public class Item {
         this.stock = atomicStock.get();
     }
 
+    public void decreaseStockV3(int quantity) {
+        if (this.stock < quantity) {
+            throw new IllegalStateException("재고가 부족합니다.");
+        }
+        this.stock -= quantity;
+    }
     public boolean isOnSale() {
         LocalDateTime now = LocalDateTime.now();
         return (now.isEqual(saleStart) || now.isAfter(saleStart)) && now.isBefore(saleEnd);

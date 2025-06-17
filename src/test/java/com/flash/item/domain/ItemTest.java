@@ -1,17 +1,31 @@
 package com.flash.item.domain;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.RepeatedTest;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertAll;
+
+import com.flash.item.repository.ItemRepository;
 import java.time.LocalDateTime;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
+@SpringBootTest
 class ItemTest {
+
+    @Autowired
+    private ItemRepository itemRepository;
+    
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @Test
     @DisplayName("상품 생성 테스트")
@@ -290,5 +304,73 @@ class ItemTest {
         
         // 동시성 이슈가 해결되었다면 재고가 정확히 0이어야 함
         assertThat(finalStock).isEqualTo(0);
+    }
+
+    @RepeatedTest(10)
+    @DisplayName("동시성 테스트 - V3 버전 (Pessimistic Lock)")
+    void decreaseStock_concurrent_V3() throws InterruptedException {
+        // given
+        Item item = Item.builder()
+            .name("테스트 상품")
+            .description("테스트 설명")
+            .price(10000)
+            .stock(100)
+            .saleStart(LocalDateTime.now())
+            .saleEnd(LocalDateTime.now().plusDays(7))
+            .build();
+        itemRepository.save(item);
+
+        int threadCount = 100; // 100명이 동시에 구매
+        ExecutorService executorService = Executors.newFixedThreadPool(32);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failCount = new AtomicInteger(0);
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+
+        // when
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    Thread.sleep((long) (Math.random() * 10));
+                    transactionTemplate.execute(status -> {
+                        try {
+                            Item foundItem = itemRepository.findByIdWithPessimisticLock(item.getId())
+                                .orElseThrow(() -> new RuntimeException("Item not found"));
+                            foundItem.decreaseStockV3(1);
+                            itemRepository.save(foundItem);
+                            successCount.incrementAndGet();
+                            return null;
+                        } catch (Exception e) {
+                            status.setRollbackOnly();
+                            throw e;
+                        }
+                    });
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                    failCount.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await();
+        executorService.shutdown();
+
+        // then
+        Item finalItem = itemRepository.findById(item.getId())
+            .orElseThrow(() -> new RuntimeException("Item not found"));
+        int finalStock = finalItem.getStock();
+        
+        System.out.println("최종 재고: " + finalStock);
+        System.out.println("성공한 구매: " + successCount.get());
+        System.out.println("실패한 구매: " + failCount.get());
+        
+        assertAll(
+            () -> assertThat(finalStock).isEqualTo(0),
+            () -> assertThat(successCount.get()).isEqualTo(100),
+            () -> assertThat(finalStock + successCount.get()).isEqualTo(100),
+            () -> assertThat(finalStock).isGreaterThanOrEqualTo(0)
+        );
     }
 } 
