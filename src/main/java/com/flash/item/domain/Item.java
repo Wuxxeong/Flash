@@ -39,6 +39,9 @@ public class Item {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     
+    @Version
+    private Long version;
+    
     @Transient
     private AtomicInteger atomicStock;
     
@@ -57,6 +60,7 @@ public class Item {
         this.saleStart = saleStart;
         this.saleEnd = saleEnd;
         this.createdAt = LocalDateTime.now();
+        this.version = 0L;
     }
     
     public void decreaseStock(int quantity) {
@@ -98,6 +102,14 @@ public class Item {
         }
         this.stock -= quantity;
     }
+
+    public void decreaseStockV4(int quantity) {
+        if (this.stock < quantity) {
+            throw new IllegalStateException("재고가 부족합니다.");
+        }
+        this.stock -= quantity;
+    }
+
     public boolean isOnSale() {
         LocalDateTime now = LocalDateTime.now();
         return (now.isEqual(saleStart) || now.isAfter(saleStart)) && now.isBefore(saleEnd);

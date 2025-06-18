@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.dao.OptimisticLockingFailureException;
 
 @SpringBootTest
 class ItemTest {
@@ -371,6 +372,155 @@ class ItemTest {
             () -> assertThat(successCount.get()).isEqualTo(100),
             () -> assertThat(finalStock + successCount.get()).isEqualTo(100),
             () -> assertThat(finalStock).isGreaterThanOrEqualTo(0)
+        );
+    }
+
+    @Test
+    @DisplayName("Optimistic Lock 기본 동작 테스트")
+    void optimisticLockTest() {
+        // given
+        Item item = Item.builder()
+            .name("테스트 상품")
+            .description("테스트 설명")
+            .price(10000)
+            .stock(100)
+            .saleStart(LocalDateTime.now())
+            .saleEnd(LocalDateTime.now().plusDays(7))
+            .build();
+        item = itemRepository.save(item);
+        Long itemId = item.getId();
+
+        // when
+        Item firstItem = itemRepository.findById(itemId)
+            .orElseThrow(() -> new RuntimeException("Item not found"));
+        Item secondItem = itemRepository.findById(itemId)
+            .orElseThrow(() -> new RuntimeException("Item not found"));
+
+        firstItem.decreaseStockV4(1);
+        itemRepository.save(firstItem);
+
+        // then
+        assertThatThrownBy(() -> {
+            secondItem.decreaseStockV4(1);
+            itemRepository.save(secondItem);
+        }).isInstanceOf(OptimisticLockingFailureException.class);
+    }
+
+    @Test
+    @DisplayName("Optimistic Lock 버전 증가 테스트")
+    void optimisticLockVersionTest() {
+        // given
+        Item item = Item.builder()
+            .name("테스트 상품")
+            .description("테스트 설명")
+            .price(10000)
+            .stock(100)
+            .saleStart(LocalDateTime.now())
+            .saleEnd(LocalDateTime.now().plusDays(7))
+            .build();
+        item = itemRepository.save(item);
+        Long itemId = item.getId();
+
+        // when
+        Item foundItem = itemRepository.findById(itemId)
+            .orElseThrow(() -> new RuntimeException("Item not found"));
+        Long initialVersion = foundItem.getVersion();
+
+        foundItem.decreaseStockV4(1);
+        itemRepository.save(foundItem);
+
+        // then
+        Item updatedItem = itemRepository.findById(itemId)
+            .orElseThrow(() -> new RuntimeException("Item not found"));
+        assertThat(updatedItem.getVersion()).isGreaterThan(initialVersion);
+    }
+
+    @RepeatedTest(10)
+    @DisplayName("Optimistic Lock 동시성 테스트")
+    /*
+    Optimistic Lock의 문제점 : Version 필드를 사용하여 동시성 문제를 해결하지만,
+    재시도 로직을 계속 수행하게 될 경우 수행시간에서 성능이 좋지 않다.
+     */
+    void optimisticLockConcurrentTest() throws InterruptedException {
+        // given
+        Item item = Item.builder()
+            .name("테스트 상품")
+            .description("테스트 설명")
+            .price(10000)
+            .stock(100)
+            .saleStart(LocalDateTime.now())
+            .saleEnd(LocalDateTime.now().plusDays(7))
+            .build();
+        item = itemRepository.save(item);
+        Long itemId = item.getId();
+
+        int threadCount = 100; // 100명이 동시에 구매
+        ExecutorService executorService = Executors.newFixedThreadPool(32);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failCount = new AtomicInteger(0);
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+
+        // when
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    Thread.sleep((long) (Math.random() * 10)); // context switching 유도
+                    boolean retry = true;
+                    int retryCount = 0;
+                    
+                    while (retry && retryCount < 5) { // 최대 5번까지 재시도
+                        try {
+                            transactionTemplate.execute(status -> {
+                                Item foundItem = itemRepository.findById(itemId)
+                                    .orElseThrow(() -> new RuntimeException("Item not found"));
+                                
+                                if (foundItem.getStock() <= 0) {
+                                    failCount.incrementAndGet();
+                                    return null;
+                                }
+                                
+                                foundItem.decreaseStockV4(1);
+                                itemRepository.save(foundItem);
+                                successCount.incrementAndGet();
+                                return null;
+                            });
+                            retry = false; // 성공하면 재시도 중단
+                        } catch (OptimisticLockingFailureException e) {
+                            retryCount++;
+                            if (retryCount >= 3) {
+                                failCount.incrementAndGet();
+                                System.out.println("최대 재시도 횟수 초과: " + e.getMessage());
+                            }
+                            Thread.sleep(100); // 충돌 시 잠시 대기
+                        }
+                    }
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                    failCount.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await();
+        executorService.shutdown();
+
+        // then
+        Item finalItem = itemRepository.findById(itemId)
+            .orElseThrow(() -> new RuntimeException("Item not found"));
+        int finalStock = finalItem.getStock();
+        
+        System.out.println("최종 재고: " + finalStock);
+        System.out.println("성공한 구매: " + successCount.get());
+        System.out.println("실패한 구매: " + failCount.get());
+        
+        assertAll(
+            () -> assertThat(finalStock).isEqualTo(0), // 재고가 정확히 0이어야 함
+            () -> assertThat(successCount.get()).isEqualTo(100), // 성공한 구매가 초기 재고와 같아야 함
+            () -> assertThat(finalStock + successCount.get()).isEqualTo(100), // 재고 + 성공한 구매가 초기 재고와 같아야 함
+            () -> assertThat(finalStock).isGreaterThanOrEqualTo(0) // 재고가 음수가 아니어야 함
         );
     }
 } 
