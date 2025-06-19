@@ -23,7 +23,7 @@ public class OrderController {
         @RequestParam Long userId,
         @RequestParam(defaultValue = "1") Integer quantity
     ) {
-        Order order = orderService.createOrder(userId, itemId, quantity);
+        Order order = orderService.createOrderV3(userId, itemId, quantity);
         return ResponseEntity.ok(OrderResponse.from(order));
     }
     

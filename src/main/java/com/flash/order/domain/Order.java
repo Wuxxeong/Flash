@@ -10,8 +10,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "flash_orders", 
-       uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "item_id"}))
+@Table(name = "flash_orders")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Order {
