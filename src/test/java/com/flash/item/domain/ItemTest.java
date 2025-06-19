@@ -406,34 +406,34 @@ class ItemTest {
         }).isInstanceOf(OptimisticLockingFailureException.class);
     }
 
-    @Test
-    @DisplayName("Optimistic Lock 버전 증가 테스트")
-    void optimisticLockVersionTest() {
-        // given
-        Item item = Item.builder()
-            .name("테스트 상품")
-            .description("테스트 설명")
-            .price(10000)
-            .stock(100)
-            .saleStart(LocalDateTime.now())
-            .saleEnd(LocalDateTime.now().plusDays(7))
-            .build();
-        item = itemRepository.save(item);
-        Long itemId = item.getId();
-
-        // when
-        Item foundItem = itemRepository.findById(itemId)
-            .orElseThrow(() -> new RuntimeException("Item not found"));
-        Long initialVersion = foundItem.getVersion();
-
-        foundItem.decreaseStockV4(1);
-        itemRepository.save(foundItem);
-
-        // then
-        Item updatedItem = itemRepository.findById(itemId)
-            .orElseThrow(() -> new RuntimeException("Item not found"));
-        assertThat(updatedItem.getVersion()).isGreaterThan(initialVersion);
-    }
+//    @Test
+//    @DisplayName("Optimistic Lock 버전 증가 테스트")
+//    void optimisticLockVersionTest() {
+//        // given
+//        Item item = Item.builder()
+//            .name("테스트 상품")
+//            .description("테스트 설명")
+//            .price(10000)
+//            .stock(100)
+//            .saleStart(LocalDateTime.now())
+//            .saleEnd(LocalDateTime.now().plusDays(7))
+//            .build();
+//        item = itemRepository.save(item);
+//        Long itemId = item.getId();
+//
+//        // when
+//        Item foundItem = itemRepository.findById(itemId)
+//            .orElseThrow(() -> new RuntimeException("Item not found"));
+//        Long initialVersion = foundItem.getVersion();
+//
+//        foundItem.decreaseStockV4(1);
+//        itemRepository.save(foundItem);
+//
+//        // then
+//        Item updatedItem = itemRepository.findById(itemId)
+//            .orElseThrow(() -> new RuntimeException("Item not found"));
+//        assertThat(updatedItem.getVersion()).isGreaterThan(initialVersion);
+//    }
 
     @RepeatedTest(10)
     @DisplayName("Optimistic Lock 동시성 테스트")

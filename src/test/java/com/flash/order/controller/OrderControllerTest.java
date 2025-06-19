@@ -56,7 +56,7 @@ class OrderControllerTest {
             .quantity(2)
             .build();
 
-        when(orderService.createOrder(anyLong(), anyLong(), anyInt())).thenReturn(order);
+        when(orderService.createOrderV3(anyLong(), anyLong(), anyInt())).thenReturn(order);
 
         // when & then
         mockMvc.perform(post("/api/purchase")
